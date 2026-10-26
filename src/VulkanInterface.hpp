@@ -495,12 +495,13 @@ class VulkanInterface {
 	static size_t probeCoordinatesToIndex(const glm::ivec3& position, DDGICascade& cascade);
 	void recreateSwapChain();
 	std::vector<glm::vec3> distributePointsOnUnitSphere(int samples) const;
-	static bool nextFrame(
-		int FPS,
-		std::chrono::time_point<
-			std::chrono::steady_clock,
-			std::chrono::duration<double, std::milli>>& lastFrame
-	);
+	glm::vec3 getDdgiCenter() const;
 };
+
+bool nextFrame(
+	int FPS,
+	std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::milli>>&
+		lastFrame
+);
 
 #endif // !VULKANINTERFACE_HPP

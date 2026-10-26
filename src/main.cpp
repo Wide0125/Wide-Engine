@@ -11,6 +11,8 @@
 #include "Scene.hpp"
 #include "VulkanInterface.hpp"
 
+constexpr int PHYSICS_TICKRATE {60};
+
 int main() {
 	VulkanInterface renderer {};
 	std::unique_ptr<Scene> currentScene {std::make_unique<Scene>("Sponza.glb", renderer)};

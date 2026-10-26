@@ -839,19 +839,16 @@ void VulkanInterface::updateBuffers(bool cameraMoved) {
 	}
 }
 void VulkanInterface::updateDdgi(int cascadeIndex1, int cascadeIndex2) {
+	const glm::vec3 ddgiCenter {getDdgiCenter()};
 	DDGICascade& cascade1 {m_ddgiCascades[cascadeIndex1]};
 	cascade1.innerBounds.upperBounds =
-		static_cast<glm::ivec3>(glm::floor(m_currentScene->getCameraPosition())) +
-		cascade1.innerDimensions / 2;
+		static_cast<glm::ivec3>(glm::floor(ddgiCenter)) + cascade1.innerDimensions / 2;
 	cascade1.innerBounds.lowerBounds =
-		static_cast<glm::ivec3>(glm::floor(m_currentScene->getCameraPosition())) -
-		cascade1.innerDimensions / 2;
+		static_cast<glm::ivec3>(glm::floor(ddgiCenter)) - cascade1.innerDimensions / 2;
 	cascade1.outerBounds.upperBounds =
-		static_cast<glm::ivec3>(glm::floor(m_currentScene->getCameraPosition())) +
-		cascade1.outerDimensions / 2;
+		static_cast<glm::ivec3>(glm::floor(ddgiCenter)) + cascade1.outerDimensions / 2;
 	cascade1.outerBounds.lowerBounds =
-		static_cast<glm::ivec3>(glm::floor(m_currentScene->getCameraPosition())) -
-		cascade1.outerDimensions / 2;
+		static_cast<glm::ivec3>(glm::floor(ddgiCenter)) - cascade1.outerDimensions / 2;
 
 	DDGICascadeGPU cascade1GPU {cascade1};
 	vmaCopyMemoryToAllocation(
@@ -863,30 +860,27 @@ void VulkanInterface::updateDdgi(int cascadeIndex1, int cascadeIndex2) {
 	);
 	if (cascadeIndex2 != -1) {
 		DDGICascade& cascade2 {m_ddgiCascades[cascadeIndex2]};
-		glm::vec3 cameraPositionMod {glm::mod(
-			m_currentScene->getCameraPosition(),
-			glm::vec3 {cascade2.gridSpacing, cascade2.gridSpacing, cascade2.gridSpacing}
+		glm::vec3 ddgiCenterMod {glm::mod(
+			ddgiCenter, glm::vec3 {cascade2.gridSpacing, cascade2.gridSpacing, cascade2.gridSpacing}
 		)};
-		if (cameraPositionMod.x < 0) {
-			cameraPositionMod.x += cascade2.gridSpacing;
+		if (ddgiCenterMod.x < 0) {
+			ddgiCenterMod.x += cascade2.gridSpacing;
 		}
-		if (cameraPositionMod.y < 0) {
-			cameraPositionMod.y += cascade2.gridSpacing;
+		if (ddgiCenterMod.y < 0) {
+			ddgiCenterMod.y += cascade2.gridSpacing;
 		}
-		if (cameraPositionMod.z < 0) {
-			cameraPositionMod.z += cascade2.gridSpacing;
+		if (ddgiCenterMod.z < 0) {
+			ddgiCenterMod.z += cascade2.gridSpacing;
 		}
-		glm::ivec3 roundedCameraPosition {
-			glm::floor(m_currentScene->getCameraPosition() - cameraPositionMod)
-		};
+		glm::ivec3 roundedDdgiCenter {glm::floor(ddgiCenter - ddgiCenterMod)};
 		cascade2.innerBounds.upperBounds =
-			static_cast<glm::ivec3>(roundedCameraPosition) + cascade2.innerDimensions / 2;
+			static_cast<glm::ivec3>(roundedDdgiCenter) + cascade2.innerDimensions / 2;
 		cascade2.innerBounds.lowerBounds =
-			static_cast<glm::ivec3>(roundedCameraPosition) - cascade2.innerDimensions / 2;
+			static_cast<glm::ivec3>(roundedDdgiCenter) - cascade2.innerDimensions / 2;
 		cascade2.outerBounds.upperBounds =
-			static_cast<glm::ivec3>(roundedCameraPosition) + cascade2.outerDimensions / 2;
+			static_cast<glm::ivec3>(roundedDdgiCenter) + cascade2.outerDimensions / 2;
 		cascade2.outerBounds.lowerBounds =
-			static_cast<glm::ivec3>(roundedCameraPosition) - cascade2.outerDimensions / 2;
+			static_cast<glm::ivec3>(roundedDdgiCenter) - cascade2.outerDimensions / 2;
 
 		DDGICascadeGPU cascade2GPU {cascade2};
 		vmaCopyMemoryToAllocation(
@@ -1040,7 +1034,7 @@ std::vector<glm::vec3> VulkanInterface::distributePointsOnUnitSphere(int samples
 	}
 	return points;
 }
-bool VulkanInterface::nextFrame(
+bool nextFrame(
 	int FPS,
 	std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::milli>>&
 		lastFrame
@@ -1056,3 +1050,27 @@ bool VulkanInterface::nextFrame(
 	return false;
 } // determines if time since last frame is longer than or equal to the time between frames given
   // a framerate, and updates lastFrame to sync
+
+// Source - https://stackoverflow.com/a/4609795
+// Posted by user79758, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-09-29, License - CC BY-SA 4.0
+
+template <typename T> int sgn(T val) { return (T(0) < val) - (val < T(0)); }
+
+glm::vec3 VulkanInterface::getDdgiCenter() const {
+	const glm::vec3& direction {m_currentScene->getLookAtVector()};
+	glm::vec3 a {
+		static_cast<float>(DDGI_CASCADE_BASE_DIMENSIONS.x) / 2 * glm::vec3(sgn(direction.x), 0, 0)
+	};
+	glm::vec3 b {
+		static_cast<float>(DDGI_CASCADE_BASE_DIMENSIONS.y) / 2 * glm::vec3(0, sgn(direction.y), 0)
+	};
+	glm::vec3 c {
+		static_cast<float>(DDGI_CASCADE_BASE_DIMENSIONS.z) / 2 * glm::vec3(0, 0, sgn(direction.z))
+	};
+	float aDistance {glm::length(a) * glm::length(a) / glm::dot(direction, a)};
+	float bDistance {glm::length(b) * glm::length(b) / glm::dot(direction, b)};
+	float cDistance {glm::length(c) * glm::length(c) / glm::dot(direction, c)};
+	float distance {std::min({aDistance, bDistance, cDistance})};
+	return m_currentScene->getCameraPosition() + direction * distance;
+}

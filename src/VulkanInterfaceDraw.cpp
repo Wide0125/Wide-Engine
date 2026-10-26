@@ -6,6 +6,8 @@
 #include "Scene.hpp"
 #include "VulkanInterface.hpp"
 
+#include <print>
+
 void VulkanInterface::drawFrame() {
 	auto fenceResult =
 		m_device.waitForFences(*m_inFlightFences[m_frameIndex], vk::True, UINT64_MAX);
@@ -23,7 +25,7 @@ void VulkanInterface::drawFrame() {
 		assert(result == vk::Result::eTimeout || result == vk::Result::eNotReady);
 		throw std::runtime_error("failed to acquire swap chain image!");
 	}
-	
+
 	bool cameraMoved {m_currentScene->handleCameraMovement()};
 	updateBuffers(cameraMoved);
 	updateTlas();
@@ -288,4 +290,6 @@ void VulkanInterface::drawFrame() {
 	}
 
 	m_frameIndex = (m_frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+	glm::vec3 ddgiCenter {getDdgiCenter()};
+	std::println("ddgiCenter: {}, {}, {}", ddgiCenter.x, ddgiCenter.y, ddgiCenter.z);
 }
