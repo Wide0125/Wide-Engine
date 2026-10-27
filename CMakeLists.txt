@@ -16,11 +16,6 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-if(WIN32)
-  set(glfw3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/glfw3.4/lib/cmake")
-  list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/glfw3.4/lib/cmake")
-endif()
-
 find_package(Vulkan 1.4.357 REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(glm REQUIRED)
